@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Type, Image, Mic, Upload, Sparkles, Music, Wand2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Project, MUSICAL_KEYS } from "@/types/studio";
+import { Project, MUSICAL_KEYS, Track } from "@/types/studio";
 import { toast } from "sonner";
+import { getPresetById, getSuggestedPresets } from "@/lib/presets";
+import { pickSampleForPrompt } from "@/lib/audioSamples";
 
 type InputMode = "text" | "image" | "voice" | "upload";
 
 interface IdeaStageProps {
   project: Project;
   onUpdateProject: (updates: Partial<Pick<Project, "name" | "bpm" | "key" | "timeSignature">>) => void;
-  onAddTrack: (name: string, type: "generated" | "uploaded") => void;
+  onAddTrack: (name: string, type: "generated" | "uploaded", overrides?: Partial<Track>) => void;
   onNext: () => void;
 }
 
@@ -22,6 +24,9 @@ const IdeaStage = ({ project, onUpdateProject, onAddTrack, onNext }: IdeaStagePr
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const suggestions = [
     "Lo-fi beats for a rainy evening",
@@ -39,14 +44,37 @@ const IdeaStage = ({ project, onUpdateProject, onAddTrack, onNext }: IdeaStagePr
     { key: "upload" as InputMode, icon: Upload, label: "Restyle", desc: "Transform audio" },
   ];
 
+  useEffect(() => {
+    return () => {
+      if (uploadedUrl) URL.revokeObjectURL(uploadedUrl);
+    };
+  }, [uploadedUrl]);
+
+  const presets = getSuggestedPresets(prompt, uploadedFile?.name);
+  const activePreset = getPresetById(selectedPresetId ?? undefined);
+
   const handleGenerate = () => {
     if (!prompt.trim() && activeMode !== "upload") return;
+    if (activeMode === "upload" && !uploadedUrl) {
+      toast.error("Upload an audio file first.");
+      return;
+    }
     setIsGenerating(true);
     toast.info("Generating audio...", { description: prompt || "Processing uploaded audio" });
     setTimeout(() => {
       setIsGenerating(false);
       const trackName = prompt.slice(0, 30) || uploadedFile?.name || "Generated Track";
-      onAddTrack(trackName, activeMode === "upload" ? "uploaded" : "generated");
+      const sample = pickSampleForPrompt(prompt || trackName);
+      const overrides: Partial<Track> = {
+        audioUrl: activeMode === "upload" ? uploadedUrl ?? undefined : sample.url,
+        audioDurationSeconds: activeMode === "upload" ? undefined : sample.durationSeconds,
+        playbackRate: activePreset?.settings.playbackRate ?? 1,
+        pitch: activePreset?.settings.pitch ?? 0,
+        tone: activePreset?.settings.tone ?? 60,
+        loop: activePreset?.settings.loop ?? true,
+        presetId: activePreset?.id,
+      };
+      onAddTrack(trackName, activeMode === "upload" ? "uploaded" : "generated", overrides);
       toast.success("Track generated!", { description: "Added to your project." });
     }, 3000);
   };
@@ -220,13 +248,29 @@ const IdeaStage = ({ project, onUpdateProject, onAddTrack, onNext }: IdeaStagePr
 
           {activeMode === "upload" && (
             <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-              <div className="border-2 border-dashed border-border/60 rounded-xl p-6 text-center hover:border-secondary/30 transition-colors cursor-pointer">
+              <div
+                className="border-2 border-dashed border-border/60 rounded-xl p-6 text-center hover:border-secondary/30 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Upload className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">Upload existing audio to restyle</p>
                 <p className="text-xs text-muted-foreground/60 mt-1">MP3, WAV, FLAC — up to 20MB</p>
                 {uploadedFile && (
                   <p className="text-sm text-primary mt-3 font-medium">{uploadedFile.name}</p>
                 )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (!file) return;
+                    if (uploadedUrl) URL.revokeObjectURL(uploadedUrl);
+                    setUploadedFile(file);
+                    setUploadedUrl(URL.createObjectURL(file));
+                  }}
+                />
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Wand2 className="w-4 h-4 text-secondary" />
@@ -241,6 +285,40 @@ const IdeaStage = ({ project, onUpdateProject, onAddTrack, onNext }: IdeaStagePr
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Suggested presets */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Suggested Presets</p>
+          {selectedPresetId && (
+            <button
+              onClick={() => setSelectedPresetId(null)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="grid md:grid-cols-3 gap-2">
+          {presets.map((preset) => {
+            const isActive = selectedPresetId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                onClick={() => setSelectedPresetId(isActive ? null : preset.id)}
+                className={`text-left p-3 rounded-xl border transition-colors ${
+                  isActive
+                    ? "border-primary/40 bg-primary/10"
+                    : "border-border/50 bg-muted/40 hover:bg-muted"
+                }`}
+              >
+                <p className="text-xs font-semibold text-foreground">{preset.label}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{preset.description}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Duration control */}

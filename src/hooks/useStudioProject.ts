@@ -12,7 +12,8 @@ export const useStudioProject = () => {
     setProject((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  const addTrack = useCallback((name: string, type: Track["type"] = "generated") => {
+  const addTrack = useCallback(
+    (name: string, type: Track["type"] = "generated", overrides: Partial<Track> = {}) => {
     const colorIndex = project.tracks.length % TRACK_COLORS.length;
     const newTrack: Track = {
       id: `track-${Date.now()}`,
@@ -23,10 +24,19 @@ export const useStudioProject = () => {
       pan: 0,
       muted: false,
       solo: false,
+      audioUrl: overrides.audioUrl,
+      audioDurationSeconds: overrides.audioDurationSeconds,
+      playbackRate: 1,
+      pitch: 0,
+      tone: 60,
+      trimStart: 0,
+      trimEnd: undefined,
+      loop: true,
+      presetId: overrides.presetId,
       clips: [],
       effects: [...DEFAULT_EFFECTS],
     };
-    setProject((prev) => ({ ...prev, tracks: [...prev.tracks, newTrack] }));
+    setProject((prev) => ({ ...prev, tracks: [...prev.tracks, { ...newTrack, ...overrides }] }));
   }, [project.tracks.length]);
 
   const removeTrack = useCallback((trackId: string) => {

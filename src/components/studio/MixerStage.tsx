@@ -3,17 +3,44 @@ import { Project, Track } from "@/types/studio";
 import ChannelStrip from "./ChannelStrip";
 import { Slider } from "@/components/ui/slider";
 import { Volume2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import TrackInspector from "./TrackInspector";
 
 interface MixerStageProps {
   project: Project;
   onUpdateTrack: (trackId: string, updates: Partial<Track>) => void;
   onToggleMute: (trackId: string) => void;
   onToggleSolo: (trackId: string) => void;
+  onTogglePlay: (trackId: string) => void;
+  isTrackPlaying: (trackId: string) => boolean;
+  trackDurations: Record<string, number>;
+  masterVolume: number;
+  onMasterVolumeChange: (volume: number) => void;
 }
 
-const MixerStage = ({ project, onUpdateTrack, onToggleMute, onToggleSolo }: MixerStageProps) => {
-  const [masterVolume, setMasterVolume] = useState(85);
+const MixerStage = ({
+  project,
+  onUpdateTrack,
+  onToggleMute,
+  onToggleSolo,
+  onTogglePlay,
+  isTrackPlaying,
+  trackDurations,
+  masterVolume,
+  onMasterVolumeChange,
+}: MixerStageProps) => {
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedTrackId && project.tracks.length > 0) {
+      setSelectedTrackId(project.tracks[0].id);
+    }
+    if (selectedTrackId && !project.tracks.find((track) => track.id === selectedTrackId)) {
+      setSelectedTrackId(project.tracks[0]?.id ?? null);
+    }
+  }, [project.tracks, selectedTrackId]);
+
+  const selectedTrack = project.tracks.find((track) => track.id === selectedTrackId);
 
   return (
     <div className="space-y-6">
@@ -49,6 +76,10 @@ const MixerStage = ({ project, onUpdateTrack, onToggleMute, onToggleSolo }: Mixe
                   onPanChange={(p) => onUpdateTrack(track.id, { pan: p })}
                   onToggleMute={() => onToggleMute(track.id)}
                   onToggleSolo={() => onToggleSolo(track.id)}
+                  onTogglePlay={() => onTogglePlay(track.id)}
+                  isPlaying={isTrackPlaying(track.id)}
+                  onSelect={() => setSelectedTrackId(track.id)}
+                  isSelected={track.id === selectedTrackId}
                 />
               ))}
 
@@ -83,7 +114,7 @@ const MixerStage = ({ project, onUpdateTrack, onToggleMute, onToggleSolo }: Mixe
                   <Slider
                     orientation="vertical"
                     value={[masterVolume]}
-                    onValueChange={([v]) => setMasterVolume(v)}
+                    onValueChange={([v]) => onMasterVolumeChange(v)}
                     min={0}
                     max={100}
                     className="h-full"
@@ -97,6 +128,16 @@ const MixerStage = ({ project, onUpdateTrack, onToggleMute, onToggleSolo }: Mixe
           )}
         </div>
       </div>
+
+      {selectedTrack && (
+        <TrackInspector
+          track={selectedTrack}
+          durationSeconds={trackDurations[selectedTrack.id]}
+          isPlaying={isTrackPlaying(selectedTrack.id)}
+          onTogglePlay={() => onTogglePlay(selectedTrack.id)}
+          onUpdateTrack={(updates) => onUpdateTrack(selectedTrack.id, updates)}
+        />
+      )}
     </div>
   );
 };

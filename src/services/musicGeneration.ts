@@ -4,6 +4,8 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export interface GenerationResult {
   audioUrl: string;
   duration: number;
+  audioBlob: Blob;
+  mimeType: string;
 }
 
 export interface GenerationError {
@@ -51,10 +53,13 @@ export async function generateMusic(
   }
 
   const audioUrl = URL.createObjectURL(audioBlob);
+  const mimeType = response.headers.get("content-type") || audioBlob.type || "audio/mpeg";
 
   return {
     audioUrl,
     duration,
+    audioBlob,
+    mimeType,
   };
 }
 

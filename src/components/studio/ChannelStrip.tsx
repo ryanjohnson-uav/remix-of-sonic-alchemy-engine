@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, Play, Pause } from "lucide-react";
 import { Track } from "@/types/studio";
 import { Slider } from "@/components/ui/slider";
 
@@ -9,22 +9,49 @@ interface ChannelStripProps {
   onPanChange: (pan: number) => void;
   onToggleMute: () => void;
   onToggleSolo: () => void;
+  onTogglePlay: () => void;
+  isPlaying: boolean;
+  onSelect: () => void;
+  isSelected: boolean;
 }
 
-const ChannelStrip = ({ track, onVolumeChange, onPanChange, onToggleMute, onToggleSolo }: ChannelStripProps) => {
+const ChannelStrip = ({
+  track,
+  onVolumeChange,
+  onPanChange,
+  onToggleMute,
+  onToggleSolo,
+  onTogglePlay,
+  isPlaying,
+  onSelect,
+  isSelected,
+}: ChannelStripProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel p-3 flex flex-col items-center gap-3 min-w-[80px]"
+      className={`glass-panel p-3 flex flex-col items-center gap-3 min-w-[80px] ${
+        isSelected ? "ring-1 ring-primary/50" : ""
+      }`}
     >
       {/* Track color indicator */}
       <div className="w-full h-1 rounded-full" style={{ backgroundColor: track.color }} />
 
       {/* Track name */}
-      <span className="text-[10px] font-medium text-foreground truncate w-full text-center">
+      <button
+        onClick={onSelect}
+        className="text-[10px] font-medium text-foreground truncate w-full text-center hover:text-primary transition-colors"
+      >
         {track.name}
-      </span>
+      </button>
+
+      {/* Play / Pause */}
+      <button
+        onClick={onTogglePlay}
+        className="p-1.5 rounded-lg bg-muted/60 hover:bg-muted transition-colors"
+      >
+        {isPlaying ? <Pause className="w-3.5 h-3.5 text-primary" /> : <Play className="w-3.5 h-3.5 text-primary" />}
+      </button>
 
       {/* Meter visualization */}
       <div className="flex gap-0.5 h-32 items-end">

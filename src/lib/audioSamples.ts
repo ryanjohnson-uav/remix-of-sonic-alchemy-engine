@@ -1,0 +1,54 @@
+export interface AudioSample {
+  id: string;
+  title: string;
+  url: string;
+  durationSeconds: number;
+  tags: string[];
+}
+
+const SAMPLE_AUDIO_BASE64 =
+  "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";
+
+export const SAMPLE_AUDIO_URL = `data:audio/wav;base64,${SAMPLE_AUDIO_BASE64}`;
+
+export const AUDIO_SAMPLES: AudioSample[] = [
+  {
+    id: "lofi",
+    title: "Lo-fi beats for a rainy evening",
+    url: SAMPLE_AUDIO_URL,
+    durationSeconds: 0.1,
+    tags: ["lofi", "warm", "beats"],
+  },
+  {
+    id: "ambient",
+    title: "Sunset beach ambient mix",
+    url: SAMPLE_AUDIO_URL,
+    durationSeconds: 0.1,
+    tags: ["ambient", "pads", "chill"],
+  },
+  {
+    id: "vocal",
+    title: "Hummed melody expansion",
+    url: SAMPLE_AUDIO_URL,
+    durationSeconds: 0.1,
+    tags: ["vocal", "melody", "idea"],
+  },
+];
+
+const KEYWORDS: Array<{ keyword: string; sampleId: string }> = [
+  { keyword: "lofi", sampleId: "lofi" },
+  { keyword: "rain", sampleId: "lofi" },
+  { keyword: "ambient", sampleId: "ambient" },
+  { keyword: "pad", sampleId: "ambient" },
+  { keyword: "vocal", sampleId: "vocal" },
+  { keyword: "melody", sampleId: "vocal" },
+];
+
+export const pickSampleForPrompt = (prompt: string): AudioSample => {
+  const normalized = prompt.toLowerCase();
+  const match = KEYWORDS.find((entry) => normalized.includes(entry.keyword));
+  if (match) {
+    return AUDIO_SAMPLES.find((sample) => sample.id === match.sampleId) ?? AUDIO_SAMPLES[0];
+  }
+  return AUDIO_SAMPLES[0];
+};
