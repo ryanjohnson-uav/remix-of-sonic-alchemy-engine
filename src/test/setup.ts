@@ -40,3 +40,15 @@ Object.defineProperty(window, "ResizeObserver", {
     disconnect() {}
   },
 });
+
+// Mock URL.createObjectURL and revokeObjectURL for audio blob tests
+let blobCounter = 0;
+Object.defineProperty(URL, "createObjectURL", {
+  writable: true,
+  value: (blob: Blob) => `blob:http://localhost/${++blobCounter}`,
+});
+
+Object.defineProperty(URL, "revokeObjectURL", {
+  writable: true,
+  value: () => {},
+});
