@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Waves } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   return (
@@ -23,11 +24,11 @@ const Navbar = () => {
           <a href="#create" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Create
           </a>
+          <Link to="/studio" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Studio
+          </Link>
           <a href="#explore" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Explore
-          </a>
-          <a href="#api" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            API
           </a>
         </div>
 
