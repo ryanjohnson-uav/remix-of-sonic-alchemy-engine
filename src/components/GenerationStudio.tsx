@@ -7,10 +7,19 @@ import ImageInput from "./ImageInput";
 import VoiceInput from "./VoiceInput";
 import GenerationCard from "./GenerationCard";
 import { toast } from "sonner";
+import { generateMusic, revokeAudioUrl } from "@/services/musicGeneration";
 
 type InputMode = "text" | "image" | "voice";
 
-const mockGenerations = [
+interface Generation {
+  title: string;
+  mode: string;
+  duration: string;
+  timestamp: string;
+  audioUrl?: string;
+}
+
+const mockGenerations: Generation[] = [
   {
     title: "Lo-fi beats for a rainy evening",
     mode: "Text → Music",
@@ -34,35 +43,45 @@ const mockGenerations = [
 const GenerationStudio = () => {
   const [activeMode, setActiveMode] = useState<InputMode>("text");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generations, setGenerations] = useState(mockGenerations);
+  const [generations, setGenerations] = useState<Generation[]>(mockGenerations);
 
-  const handleGenerate = (prompt: string) => {
+  const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
     toast.info("Starting generation...", {
       description: prompt,
     });
 
-    // Simulate generation
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      const result = await generateMusic(prompt, 30);
+      
       const modeLabels: Record<InputMode, string> = {
         text: "Text → Music",
         image: "Image → Music",
         voice: "Voice → Music",
       };
-      setGenerations((prev) => [
-        {
-          title: prompt.slice(0, 50),
-          mode: modeLabels[activeMode],
-          duration: `0:${Math.floor(20 + Math.random() * 40)}`,
-          timestamp: "Just now",
-        },
-        ...prev,
-      ]);
+
+      const newGeneration: Generation = {
+        title: prompt.slice(0, 50),
+        mode: modeLabels[activeMode],
+        duration: `0:${result.duration}`,
+        timestamp: "Just now",
+        audioUrl: result.audioUrl,
+      };
+
+      setGenerations((prev) => [newGeneration, ...prev]);
+      
       toast.success("Track generated!", {
         description: "Your new audio is ready to play.",
       });
-    }, 3000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Generation failed";
+      toast.error("Generation failed", {
+        description: message,
+      });
+      console.error("Generation error:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const modes = [
