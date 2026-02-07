@@ -48,6 +48,11 @@ describe("useStudioProject", () => {
     expect(newTrack.pan).toBe(0);
     expect(newTrack.muted).toBe(false);
     expect(newTrack.solo).toBe(false);
+    expect(newTrack.playbackRate).toBe(1);
+    expect(newTrack.pitch).toBe(0);
+    expect(newTrack.tone).toBe(60);
+    expect(newTrack.trimStart).toBe(0);
+    expect(newTrack.loop).toBe(true);
     expect(newTrack.clips).toEqual([]);
     expect(newTrack.effects.length).toBe(4);
   });

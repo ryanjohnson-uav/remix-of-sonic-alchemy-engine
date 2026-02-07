@@ -62,6 +62,8 @@ describe("musicGeneration service", () => {
 
       expect(result.audioUrl).toMatch(/^blob:/);
       expect(result.duration).toBe(45);
+      expect(result.audioBlob).toBeInstanceOf(Blob);
+      expect(result.mimeType).toBe("audio/mpeg");
     });
 
     it("throws error when API returns JSON error", async () => {

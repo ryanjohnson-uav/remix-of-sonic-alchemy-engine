@@ -1,15 +1,24 @@
 import { motion } from "framer-motion";
-import { Volume2, VolumeX } from "lucide-react";
-import { Track, Clip } from "@/types/studio";
+import { Volume2, VolumeX, Play, Pause } from "lucide-react";
+import { Track } from "@/types/studio";
 
 interface TrackTimelineProps {
   track: Track;
   totalBeats: number;
   onToggleMute: () => void;
   onToggleSolo: () => void;
+  onTogglePlay: () => void;
+  isPlaying: boolean;
 }
 
-const TrackTimeline = ({ track, totalBeats, onToggleMute, onToggleSolo }: TrackTimelineProps) => {
+const TrackTimeline = ({
+  track,
+  totalBeats,
+  onToggleMute,
+  onToggleSolo,
+  onTogglePlay,
+  isPlaying,
+}: TrackTimelineProps) => {
   const beatWidth = 32; // px per beat
 
   return (
@@ -19,6 +28,12 @@ const TrackTimeline = ({ track, totalBeats, onToggleMute, onToggleSolo }: TrackT
         <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: track.color }} />
         <span className="text-xs font-medium text-foreground truncate flex-1">{track.name}</span>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={onTogglePlay}
+            className="p-1 rounded text-xs transition-colors text-muted-foreground hover:text-foreground"
+          >
+            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+          </button>
           <button
             onClick={onToggleMute}
             className={`p-1 rounded text-xs transition-colors ${

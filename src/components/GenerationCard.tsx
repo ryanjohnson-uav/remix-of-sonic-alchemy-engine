@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Play, Pause, Download, Clock, Waves } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import WaveformVisualizer from "./WaveformVisualizer";
+import { formatTime } from "@/lib/audioUtils";
 
 interface GenerationCardProps {
   title: string;
@@ -9,10 +10,67 @@ interface GenerationCardProps {
   duration: string;
   timestamp: string;
   index: number;
+  audioUrl?: string;
 }
 
-const GenerationCard = ({ title, mode, duration, timestamp, index }: GenerationCardProps) => {
+const GenerationCard = ({ title, mode, duration, timestamp, index, audioUrl }: GenerationCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    setIsPlaying(false);
+    setHasError(false);
+    setIsReady(false);
+    setCurrentTime(0);
+  }, [audioUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !audioUrl) return;
+
+    const handleLoaded = () => {
+      setIsReady(true);
+      setDurationSeconds(audio.duration);
+    };
+    const handleTime = () => setCurrentTime(audio.currentTime);
+    const handleEnded = () => setIsPlaying(false);
+    const handleError = () => setHasError(true);
+
+    audio.addEventListener("loadedmetadata", handleLoaded);
+    audio.addEventListener("timeupdate", handleTime);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoaded);
+      audio.removeEventListener("timeupdate", handleTime);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
+    };
+  }, [audioUrl]);
+
+  const togglePlayback = async () => {
+    if (!audioRef.current || !audioUrl || hasError) return;
+    if (audioRef.current.paused) {
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (error) {
+        console.error("Audio playback failed:", error);
+        setHasError(true);
+      }
+      return;
+    }
+    audioRef.current.pause();
+    setIsPlaying(false);
+  };
+
+  const displayDuration =
+    durationSeconds && durationSeconds >= 1 ? formatTime(durationSeconds) : duration;
 
   return (
     <motion.div
@@ -24,8 +82,9 @@ const GenerationCard = ({ title, mode, duration, timestamp, index }: GenerationC
       <div className="flex items-start gap-4">
         {/* Play button */}
         <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+          onClick={togglePlayback}
+          disabled={!audioUrl || hasError}
+          className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isPlaying ? (
             <Pause className="w-5 h-5 text-primary" />
@@ -43,7 +102,7 @@ const GenerationCard = ({ title, mode, duration, timestamp, index }: GenerationC
             </span>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
-              {duration}
+              {displayDuration}
             </span>
           </div>
 
@@ -51,14 +110,35 @@ const GenerationCard = ({ title, mode, duration, timestamp, index }: GenerationC
           <div className="mt-3 h-8">
             <WaveformVisualizer isPlaying={isPlaying} barCount={30} />
           </div>
+          {audioUrl && (
+            <div className="mt-2 text-[10px] text-muted-foreground/70">
+              {formatTime(currentTime)} / {displayDuration}
+              {!isReady && !hasError && <span className="ml-2">Loading…</span>}
+              {hasError && <span className="ml-2 text-destructive">Playback unavailable</span>}
+            </div>
+          )}
         </div>
 
-        <button className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted">
-          <Download className="w-4 h-4 text-muted-foreground" />
-        </button>
+        {audioUrl ? (
+          <a
+            href={audioUrl}
+            download={`${title}.mp3`}
+            className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+          >
+            <Download className="w-4 h-4 text-muted-foreground" />
+          </a>
+        ) : (
+          <button
+            className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted disabled:opacity-40"
+            disabled
+          >
+            <Download className="w-4 h-4 text-muted-foreground" />
+          </button>
+        )}
       </div>
 
       <p className="text-xs text-muted-foreground/60 mt-3">{timestamp}</p>
+      {audioUrl && <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />}
     </motion.div>
   );
 };

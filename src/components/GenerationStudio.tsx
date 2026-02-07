@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Type, Image, Mic } from "lucide-react";
 import InputModeCard from "./InputModeCard";
@@ -8,6 +8,9 @@ import VoiceInput from "./VoiceInput";
 import GenerationCard from "./GenerationCard";
 import { toast } from "sonner";
 import { generateMusic, revokeAudioUrl } from "@/services/musicGeneration";
+import { AUDIO_SAMPLES } from "@/lib/audioSamples";
+import { formatTime } from "@/lib/audioUtils";
+import { loadLibraryItems, storeGeneratedTrack, type LibraryItem } from "@/services/audioLibrary";
 
 type InputMode = "text" | "image" | "voice";
 
@@ -25,18 +28,21 @@ const mockGenerations: Generation[] = [
     mode: "Text → Music",
     duration: "0:32",
     timestamp: "Just now",
+    audioUrl: AUDIO_SAMPLES[0].url,
   },
   {
     title: "Sunset beach ambient mix",
     mode: "Image → Music",
     duration: "1:04",
     timestamp: "2 minutes ago",
+    audioUrl: AUDIO_SAMPLES[1].url,
   },
   {
     title: "Hummed melody expansion",
     mode: "Voice → Music",
     duration: "0:48",
     timestamp: "5 minutes ago",
+    audioUrl: AUDIO_SAMPLES[2].url,
   },
 ];
 
@@ -44,6 +50,11 @@ const GenerationStudio = () => {
   const [activeMode, setActiveMode] = useState<InputMode>("text");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generations, setGenerations] = useState<Generation[]>(mockGenerations);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>(() => loadLibraryItems());
+
+  useEffect(() => {
+    setLibraryItems(loadLibraryItems());
+  }, []);
 
   const handleGenerate = async (prompt: string) => {
     setIsGenerating(true);
@@ -60,15 +71,34 @@ const GenerationStudio = () => {
         voice: "Voice → Music",
       };
 
-      const newGeneration: Generation = {
+      const { item, updated } = await storeGeneratedTrack({
         title: prompt.slice(0, 50),
+        prompt,
+        blob: result.audioBlob,
+        durationSeconds: result.duration,
+        source: "generated",
+      });
+
+      const newGeneration: Generation = {
+        title: item.title,
         mode: modeLabels[activeMode],
-        duration: `0:${result.duration}`,
+        duration: formatTime(result.duration),
         timestamp: "Just now",
-        audioUrl: result.audioUrl,
+        audioUrl: item.url,
       };
 
       setGenerations((prev) => [newGeneration, ...prev]);
+      setLibraryItems(updated);
+
+      if (result.audioUrl.startsWith("blob:") && item.url !== result.audioUrl) {
+        revokeAudioUrl(result.audioUrl);
+      }
+
+      if (item.isLocalFallback) {
+        toast.warning("Library stored locally", {
+          description: "Set up the Supabase storage bucket to persist files across devices.",
+        });
+      }
       
       toast.success("Track generated!", {
         description: "Your new audio is ready to play.",
@@ -178,6 +208,31 @@ const GenerationStudio = () => {
           {generations.map((gen, i) => (
             <GenerationCard key={`${gen.title}-${i}`} {...gen} index={i} />
           ))}
+
+          <div className="pt-6">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Music Library
+            </h3>
+            {libraryItems.length === 0 ? (
+              <div className="glass-panel p-4 text-xs text-muted-foreground mt-3">
+                Generated tracks will appear here for reuse.
+              </div>
+            ) : (
+              <div className="space-y-3 mt-3">
+                {libraryItems.map((item, i) => (
+                  <GenerationCard
+                    key={item.id}
+                    title={item.title}
+                    mode={`Library · ${item.source}`}
+                    duration={formatTime(item.durationSeconds)}
+                    timestamp={new Date(item.createdAt).toLocaleString()}
+                    audioUrl={item.url}
+                    index={i}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>

@@ -6,37 +6,60 @@ interface TransportControlsProps {
   bpm: number;
   timeSignature: string;
   onBpmChange: (bpm: number) => void;
+  isPlaying?: boolean;
+  onPlayToggle?: () => void;
+  onStop?: () => void;
+  onRewind?: () => void;
 }
 
-const TransportControls = ({ bpm, timeSignature, onBpmChange }: TransportControlsProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+const TransportControls = ({
+  bpm,
+  timeSignature,
+  onBpmChange,
+  isPlaying,
+  onPlayToggle,
+  onStop,
+  onRewind,
+}: TransportControlsProps) => {
+  const [internalPlaying, setInternalPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [position, setPosition] = useState("1.1.1");
+  const playing = isPlaying ?? internalPlaying;
 
   return (
     <div className="flex items-center gap-4">
       {/* Transport buttons */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => setPosition("1.1.1")}
+          onClick={() => {
+            setPosition("1.1.1");
+            onRewind?.();
+          }}
           className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
           <SkipBack className="w-4 h-4" />
         </button>
         <motion.button
-          onClick={() => setIsPlaying(!isPlaying)}
+          onClick={() => {
+            if (onPlayToggle) {
+              onPlayToggle();
+            } else {
+              setInternalPlaying((prev) => !prev);
+            }
+          }}
           className={`p-2.5 rounded-lg transition-colors ${
-            isPlaying ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            playing ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
           }`}
           whileTap={{ scale: 0.9 }}
         >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
         </motion.button>
         <button
           onClick={() => {
-            setIsPlaying(false);
+            setInternalPlaying(false);
             setPosition("1.1.1");
+            onStop?.();
           }}
           className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >

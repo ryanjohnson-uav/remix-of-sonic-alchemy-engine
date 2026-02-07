@@ -8,9 +8,18 @@ interface ArrangementStageProps {
   onAddTrack: (name: string, type: "generated" | "uploaded") => void;
   onToggleMute: (trackId: string) => void;
   onToggleSolo: (trackId: string) => void;
+  onTogglePlay: (trackId: string) => void;
+  isTrackPlaying: (trackId: string) => boolean;
 }
 
-const ArrangementStage = ({ project, onAddTrack, onToggleMute, onToggleSolo }: ArrangementStageProps) => {
+const ArrangementStage = ({
+  project,
+  onAddTrack,
+  onToggleMute,
+  onToggleSolo,
+  onTogglePlay,
+  isTrackPlaying,
+}: ArrangementStageProps) => {
   const totalBeats = 36;
   const beatWidth = 32;
 
@@ -85,6 +94,8 @@ const ArrangementStage = ({ project, onAddTrack, onToggleMute, onToggleSolo }: A
                 totalBeats={totalBeats}
                 onToggleMute={() => onToggleMute(track.id)}
                 onToggleSolo={() => onToggleSolo(track.id)}
+                onTogglePlay={() => onTogglePlay(track.id)}
+                isPlaying={isTrackPlaying(track.id)}
               />
             ))
           )}

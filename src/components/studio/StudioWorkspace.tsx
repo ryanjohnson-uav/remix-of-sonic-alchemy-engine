@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Waves, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useStudioProject } from "@/hooks/useStudioProject";
+import { useTrackAudioEngine } from "@/hooks/useTrackAudioEngine";
 import PipelineNav from "./PipelineNav";
 import TransportControls from "./TransportControls";
 import IdeaStage from "./IdeaStage";
@@ -20,6 +21,7 @@ const StudioWorkspace = () => {
     toggleMute,
     toggleSolo,
   } = useStudioProject();
+  const audioEngine = useTrackAudioEngine(project.tracks);
 
   return (
     <div className="min-h-screen bg-background gradient-mesh flex flex-col">
@@ -50,6 +52,11 @@ const StudioWorkspace = () => {
               bpm={project.bpm}
               timeSignature={project.timeSignature}
               onBpmChange={(bpm) => updateProjectMeta({ bpm })}
+              isPlaying={audioEngine.isAnyPlaying}
+              onPlayToggle={() =>
+                audioEngine.isAnyPlaying ? audioEngine.pauseAll() : audioEngine.playAll()
+              }
+              onStop={() => audioEngine.stopAll()}
             />
           </div>
         </div>
@@ -75,6 +82,8 @@ const StudioWorkspace = () => {
                 onAddTrack={addTrack}
                 onToggleMute={toggleMute}
                 onToggleSolo={toggleSolo}
+                onTogglePlay={audioEngine.toggleTrack}
+                isTrackPlaying={audioEngine.isTrackPlaying}
               />
             </motion.div>
           )}
@@ -85,6 +94,11 @@ const StudioWorkspace = () => {
                 onUpdateTrack={updateTrack}
                 onToggleMute={toggleMute}
                 onToggleSolo={toggleSolo}
+                onTogglePlay={audioEngine.toggleTrack}
+                isTrackPlaying={audioEngine.isTrackPlaying}
+                trackDurations={audioEngine.durations}
+                masterVolume={audioEngine.masterVolume}
+                onMasterVolumeChange={audioEngine.setMasterVolume}
               />
             </motion.div>
           )}
