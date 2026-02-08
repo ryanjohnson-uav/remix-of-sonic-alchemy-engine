@@ -80,6 +80,7 @@ const StudioWorkspace = () => {
               <ArrangementStage
                 project={project}
                 onAddTrack={addTrack}
+                onUpdateTrack={updateTrack}
                 onToggleMute={toggleMute}
                 onToggleSolo={toggleSolo}
                 onTogglePlay={audioEngine.toggleTrack}

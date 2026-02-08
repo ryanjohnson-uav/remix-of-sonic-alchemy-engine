@@ -1,25 +1,35 @@
-import { motion } from "framer-motion";
 import { Volume2, VolumeX, Play, Pause } from "lucide-react";
 import { Track } from "@/types/studio";
+import DraggableClip from "./DraggableClip";
 
 interface TrackTimelineProps {
   track: Track;
   totalBeats: number;
+  beatWidth: number;
   onToggleMute: () => void;
   onToggleSolo: () => void;
   onTogglePlay: () => void;
   isPlaying: boolean;
+  onMoveClip: (clipId: string, newStart: number) => void;
+  onResizeClip: (clipId: string, newDuration: number) => void;
+  onSelectClip: (clipId: string) => void;
+  selectedClipId: string | null;
 }
 
 const TrackTimeline = ({
   track,
   totalBeats,
+  beatWidth,
   onToggleMute,
   onToggleSolo,
   onTogglePlay,
   isPlaying,
+  onMoveClip,
+  onResizeClip,
+  onSelectClip,
+  selectedClipId,
 }: TrackTimelineProps) => {
-  const beatWidth = 32; // px per beat
+  const trackHeight = 56;
 
   return (
     <div className="flex items-stretch border-b border-border/30 group">
@@ -55,8 +65,8 @@ const TrackTimeline = ({
 
       {/* Clip area */}
       <div
-        className="flex-1 relative h-14 overflow-hidden"
-        style={{ minWidth: totalBeats * beatWidth }}
+        className="flex-1 relative overflow-hidden"
+        style={{ minWidth: totalBeats * beatWidth, height: trackHeight }}
       >
         {/* Grid lines */}
         {Array.from({ length: totalBeats }).map((_, i) => (
@@ -69,40 +79,18 @@ const TrackTimeline = ({
           />
         ))}
 
-        {/* Clips */}
+        {/* Draggable Clips */}
         {track.clips.map((clip) => (
-          <motion.div
+          <DraggableClip
             key={clip.id}
-            className="absolute top-1 bottom-1 rounded-md cursor-pointer overflow-hidden"
-            style={{
-              left: clip.start * beatWidth,
-              width: clip.duration * beatWidth,
-              backgroundColor: `${clip.color}20`,
-              borderLeft: `3px solid ${clip.color}`,
-            }}
-            whileHover={{ scale: 1.01, y: -1 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
-            <div className="px-2 py-1">
-              <span className="text-[10px] font-medium text-foreground/80 truncate block">
-                {clip.label}
-              </span>
-            </div>
-            {/* Mini waveform inside clip */}
-            <div className="flex items-end gap-[1px] px-1 h-4">
-              {Array.from({ length: Math.min(clip.duration * 4, 60) }).map((_, j) => (
-                <div
-                  key={j}
-                  className="flex-1 rounded-sm"
-                  style={{
-                    backgroundColor: clip.color,
-                    opacity: 0.4,
-                    height: `${20 + Math.sin(j * 0.7) * 30 + Math.random() * 50}%`,
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
+            clip={clip}
+            beatWidth={beatWidth}
+            trackHeight={trackHeight}
+            onMove={onMoveClip}
+            onResize={onResizeClip}
+            onSelect={onSelectClip}
+            isSelected={selectedClipId === clip.id}
+          />
         ))}
       </div>
     </div>
