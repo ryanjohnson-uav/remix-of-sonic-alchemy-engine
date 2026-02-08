@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { Play, Pause, Download, Clock, Waves } from "lucide-react";
+import { Play, Pause, Download, Clock, Waves, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import WaveformVisualizer from "./WaveformVisualizer";
 import { formatTime } from "@/lib/audioUtils";
+import { Progress } from "@/components/ui/progress";
 
 interface GenerationCardProps {
   title: string;
@@ -20,6 +21,7 @@ const GenerationCard = ({ title, mode, duration, timestamp, index, audioUrl }: G
   const [currentTime, setCurrentTime] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsPlaying(false);
@@ -69,6 +71,23 @@ const GenerationCard = ({ title, mode, duration, timestamp, index, audioUrl }: G
     setIsPlaying(false);
   };
 
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !durationSeconds || !progressRef.current) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = percentage * durationSeconds;
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handleRestart = () => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = 0;
+    setCurrentTime(0);
+  };
+
+  const progressPercent = durationSeconds ? (currentTime / durationSeconds) * 100 : 0;
   const displayDuration =
     durationSeconds && durationSeconds >= 1 ? formatTime(durationSeconds) : duration;
 
@@ -110,31 +129,61 @@ const GenerationCard = ({ title, mode, duration, timestamp, index, audioUrl }: G
           <div className="mt-3 h-8">
             <WaveformVisualizer isPlaying={isPlaying} barCount={30} />
           </div>
+
+          {/* Interactive progress bar */}
           {audioUrl && (
-            <div className="mt-2 text-[10px] text-muted-foreground/70">
-              {formatTime(currentTime)} / {displayDuration}
-              {!isReady && !hasError && <span className="ml-2">Loading…</span>}
-              {hasError && <span className="ml-2 text-destructive">Playback unavailable</span>}
+            <div className="mt-3 space-y-2">
+              <div
+                ref={progressRef}
+                onClick={handleSeek}
+                className="cursor-pointer group/progress"
+              >
+                <Progress
+                  value={progressPercent}
+                  className="h-1.5 bg-muted/40 group-hover/progress:h-2 transition-all"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                <span className="font-mono">{formatTime(currentTime)}</span>
+                <div className="flex items-center gap-2">
+                  {!isReady && !hasError && <span>Loading…</span>}
+                  {hasError && <span className="text-destructive">Playback unavailable</span>}
+                  <span className="font-mono">{displayDuration}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {audioUrl ? (
-          <a
-            href={audioUrl}
-            download={`${title}.mp3`}
-            className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
-          >
-            <Download className="w-4 h-4 text-muted-foreground" />
-          </a>
-        ) : (
-          <button
-            className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted disabled:opacity-40"
-            disabled
-          >
-            <Download className="w-4 h-4 text-muted-foreground" />
-          </button>
-        )}
+        <div className="flex flex-col gap-2">
+          {/* Restart button */}
+          {audioUrl && (
+            <button
+              onClick={handleRestart}
+              disabled={!isReady || hasError}
+              className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted disabled:opacity-40"
+            >
+              <RotateCcw className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
+          {/* Download button */}
+          {audioUrl ? (
+            <a
+              href={audioUrl}
+              download={`${title}.mp3`}
+              className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+            >
+              <Download className="w-4 h-4 text-muted-foreground" />
+            </a>
+          ) : (
+            <button
+              className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted disabled:opacity-40"
+              disabled
+            >
+              <Download className="w-4 h-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground/60 mt-3">{timestamp}</p>
